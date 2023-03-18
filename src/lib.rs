@@ -1,14 +1,14 @@
-use axum::{http::StatusCode, routing::get, Router};
+use axum::{
+    http::StatusCode,
+    routing::{get, IntoMakeService},
+    Router, Server,
+};
+use hyper::server::conn::AddrIncoming;
 
-pub async fn run() {
-    // build our application with a single route
+pub fn run() -> Server<AddrIncoming, IntoMakeService<Router>> {
     let app = Router::new().route("/health_check", get(health_check));
 
-    // run it with hyper on localhost:3000
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap()).serve(app.into_make_service())
 }
 
 async fn health_check() -> StatusCode {
