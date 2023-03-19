@@ -1,7 +1,7 @@
 use std::net::{SocketAddr, TcpListener};
 
 use tokio::task::JoinHandle;
-use zero2prod::run;
+use zero2prod::startup::run;
 
 /// Spawns a new app and returns the address it is binded to, as well as a join handle for the server
 fn spawn_app() -> (SocketAddr, JoinHandle<Result<(), hyper::Error>>) {
