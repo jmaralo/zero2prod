@@ -1,32 +1,90 @@
 use std::net::{SocketAddr, TcpListener};
 
-use sqlx::{Connection, PgConnection};
-use tokio::task::JoinHandle;
-use zero2prod::{configuration::get_configuration, startup::run};
+use sqlx::{Connection, Executor, PgConnection, PgPool};
+use uuid::Uuid;
+use zero2prod::{
+    configuration::{get_configuration, DatabaseSettings, Settings},
+    startup::run,
+};
 
-/// Spawns a new app and returns the address it is binded to, as well as a join handle for the server
-fn spawn_app() -> (SocketAddr, JoinHandle<Result<(), hyper::Error>>) {
+/// Spawns a new app and returns the application details
+async fn spawn_app() -> TestApp {
+    let mut config = get_configuration().expect("Failed to parse config.");
+    config.database.database_name = Uuid::new_v4().to_string();
+
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to create listener.");
-    (
-        listener.local_addr().expect("Failed to get server address"),
-        tokio::spawn(run(listener)),
-    )
+    let address = listener.local_addr().unwrap();
+
+    let db_pool = mock_database(config.database.clone()).await;
+
+    let server = run(listener, db_pool.clone());
+
+    tokio::spawn(server);
+
+    return TestApp {
+        address: address,
+        db_pool: db_pool,
+        config: config,
+    };
+}
+
+async fn mock_database(settings: DatabaseSettings) -> PgPool {
+    let mut connection = PgConnection::connect(&settings.server_connection_string())
+        .await
+        .expect("Failed to connect to server.");
+
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}";"#, settings.database_name).as_str())
+        .await
+        .expect("Failed to create database.");
+
+    let pool = PgPool::connect(&settings.database_connection_string())
+        .await
+        .expect("Failed to connect to database.");
+
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to migrate database.");
+
+    pool
+}
+
+async fn clean_database(settings: DatabaseSettings) {
+    let mut connection = PgConnection::connect(&settings.server_connection_string())
+        .await
+        .expect("Failed to connect to server.");
+
+    connection
+        .execute(format!(r#"DROP DATABASE "{}";"#, settings.database_name).as_str())
+        .await
+        .expect("Failed to clean up database.");
+}
+
+struct TestApp {
+    pub address: SocketAddr,
+    pub db_pool: PgPool,
+    pub config: Settings,
+}
+
+struct Cleanup(Settings);
+
+impl Drop for Cleanup {
+    fn drop(&mut self) {
+        tokio::spawn(clean_database(self.0.database.clone()));
+    }
 }
 
 #[tokio::test]
 async fn valid_subscribers_test() {
-    let (addr, _app) = spawn_app();
-    let config = get_configuration().expect("Failed to parse config.");
-    let connection_string = config.database.connection_string();
+    let app = spawn_app().await;
+    let _cleanup = Cleanup(app.config);
 
-    let mut connection = PgConnection::connect(&connection_string)
-        .await
-        .expect("Failed to connect to Postgres.");
     let client = reqwest::Client::new();
 
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
     let response = client
-        .post(format!("http://{}/subscriptions", addr))
+        .post(format!("http://{}/subscriptions", app.address))
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
@@ -36,7 +94,7 @@ async fn valid_subscribers_test() {
     assert_eq!(200, response.status().as_u16());
 
     let saved = sqlx::query!("SELECT email, name FROM subscriptions")
-        .fetch_one(&mut connection)
+        .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
@@ -46,7 +104,8 @@ async fn valid_subscribers_test() {
 
 #[tokio::test]
 async fn invalid_subscribers_test() {
-    let (addr, _app) = spawn_app();
+    let app = spawn_app().await;
+    let _cleanup = Cleanup(app.config);
 
     let client = reqwest::Client::new();
     let test_cases = vec![
@@ -57,7 +116,7 @@ async fn invalid_subscribers_test() {
 
     for (body, test_case) in test_cases {
         let response = client
-            .post(format!("http://{}/subscriptions", addr))
+            .post(format!("http://{}/subscriptions", app.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()
