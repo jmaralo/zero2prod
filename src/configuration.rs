@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
 
@@ -21,4 +23,20 @@ pub struct DatabaseSettings {
     pub port: u16,
     pub host: String,
     pub database_name: String,
+}
+
+impl DatabaseSettings {
+    pub fn connection_string(&self) -> String {
+        format!("{}", self)
+    }
+}
+
+impl Display for DatabaseSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "postgres://{}:{}@{}:{}/{}",
+            self.username, self.password, self.host, self.port, self.database_name
+        )
+    }
 }

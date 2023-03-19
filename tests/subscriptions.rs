@@ -1,7 +1,8 @@
 use std::net::{SocketAddr, TcpListener};
 
+use sqlx::{Connection, PgConnection};
 use tokio::task::JoinHandle;
-use zero2prod::startup::run;
+use zero2prod::{configuration::get_configuration, startup::run};
 
 /// Spawns a new app and returns the address it is binded to, as well as a join handle for the server
 fn spawn_app() -> (SocketAddr, JoinHandle<Result<(), hyper::Error>>) {
@@ -15,7 +16,12 @@ fn spawn_app() -> (SocketAddr, JoinHandle<Result<(), hyper::Error>>) {
 #[tokio::test]
 async fn valid_subscribers_test() {
     let (addr, _app) = spawn_app();
+    let config = get_configuration().expect("Failed to parse config.");
+    let connection_string = config.database.connection_string();
 
+    let mut connection = PgConnection::connect(&connection_string)
+        .await
+        .expect("Failed to connect to Postgres.");
     let client = reqwest::Client::new();
 
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
@@ -28,6 +34,14 @@ async fn valid_subscribers_test() {
         .expect("Failed to execute request.");
 
     assert_eq!(200, response.status().as_u16());
+
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions")
+        .fetch_one(&mut connection)
+        .await
+        .expect("Failed to fetch saved subscription.");
+
+    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved.name, "le guin");
 }
 
 #[tokio::test]
