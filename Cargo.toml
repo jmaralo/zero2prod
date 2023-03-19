@@ -13,8 +13,17 @@ name = "zero2prod"
 
 [dependencies]
 axum = "0.6.11"
+config = "0.13.3"
 hyper = "0.14.25"
 serde = { version = "1.0.157", features = ["derive"] }
+sqlx = { version = "0.6.2", features = [
+    "runtime-tokio-native-tls",
+    "macros",
+    "postgres",
+    "uuid",
+    "chrono",
+    "migrate",
+] }
 tokio = { version = "1.26.0", features = ["full"] }
 
 [dev-dependencies]
