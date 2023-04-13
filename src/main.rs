@@ -7,6 +7,8 @@ use zero2prod::{configuration::get_configuration, startup::run};
 async fn main() {
     let config = get_configuration().expect("Failed to parse config.");
 
+    tracing_subscriber::fmt::init();
+
     let addr = format!("127.0.0.1:{}", config.application_port);
     let listener = TcpListener::bind(addr).unwrap();
 

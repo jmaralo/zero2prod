@@ -1,4 +1,5 @@
 use std::{net::TcpListener, sync::Arc};
+use tower_http::trace::TraceLayer;
 
 use axum::{
     routing::{get, post, IntoMakeService},
@@ -18,7 +19,8 @@ pub fn run(
     let app = Router::new()
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscriptions))
-        .with_state(state);
+        .with_state(state)
+        .layer(TraceLayer::new_for_http());
 
     axum::Server::from_tcp(listener)
         .unwrap()
