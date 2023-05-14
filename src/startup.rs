@@ -22,6 +22,7 @@ pub fn run(
         .with_state(state)
         .layer(TraceLayer::new_for_http());
 
+    tracing::info!("Starting server at {}", listener.local_addr().unwrap());
     axum::Server::from_tcp(listener)
         .unwrap()
         .serve(app.into_make_service())
