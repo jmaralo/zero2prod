@@ -1,4 +1,7 @@
-use std::net::{SocketAddr, TcpListener};
+use std::{
+    env,
+    net::{SocketAddr, TcpListener},
+};
 
 use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
@@ -10,8 +13,15 @@ use zero2prod::{
 };
 
 static TRACING: Lazy<()> = Lazy::new(|| {
-    let subscriber = get_subscriber("test".into(), "info".into());
-    init_subscriber(subscriber);
+    let name = "test".into();
+    let filter = "info".into();
+    if env::var("TEST_LOG").is_ok() {
+        let subscriber = get_subscriber(name, filter, std::io::stdout);
+        init_subscriber(subscriber);
+    } else {
+        let subscriber = get_subscriber(name, filter.into(), std::io::sink);
+        init_subscriber(subscriber);
+    }
 });
 
 /// Spawns a new app and returns the application details

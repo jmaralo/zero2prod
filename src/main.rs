@@ -11,7 +11,7 @@ use zero2prod::{
 async fn main() {
     let config = get_configuration().expect("Failed to parse config.");
 
-    init_subscriber(get_subscriber("zero2prod", "info"));
+    init_subscriber(get_subscriber("zero2prod", "info", std::io::stdout));
 
     let addr = format!("127.0.0.1:{}", config.application_port);
     let listener = TcpListener::bind(addr).unwrap();
