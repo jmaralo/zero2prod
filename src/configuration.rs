@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use config::{Config, ConfigError, File};
+use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 
 pub fn get_configuration() -> Result<Settings, ConfigError> {
@@ -19,19 +20,19 @@ pub struct Settings {
 #[derive(Deserialize, Debug, Clone)]
 pub struct DatabaseSettings {
     pub username: String,
-    pub password: String,
+    pub password: Secret<String>,
     pub port: u16,
     pub database_name: String,
     pub host: String,
 }
 
 impl DatabaseSettings {
-    pub fn server_connection_string(&self) -> String {
-        format!("{}", self)
+    pub fn server_connection_string(&self) -> Secret<String> {
+        Secret::new(format!("{}", self))
     }
 
-    pub fn database_connection_string(&self) -> String {
-        format!("{}/{}", self, self.database_name)
+    pub fn database_connection_string(&self) -> Secret<String> {
+        Secret::new(format!("{}/{}", self, self.database_name))
     }
 }
 
@@ -40,7 +41,10 @@ impl Display for DatabaseSettings {
         write!(
             f,
             "postgres://{}:{}@{}:{}",
-            self.username, self.password, self.host, self.port
+            self.username,
+            self.password.expose_secret(),
+            self.host,
+            self.port
         )
     }
 }

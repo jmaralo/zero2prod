@@ -4,6 +4,7 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
+use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use zero2prod::{
@@ -48,16 +49,17 @@ async fn spawn_app() -> TestApp {
 }
 
 async fn mock_database(settings: DatabaseSettings) -> PgPool {
-    let mut connection = PgConnection::connect(&settings.server_connection_string())
-        .await
-        .expect("Failed to connect to server.");
+    let mut connection =
+        PgConnection::connect(&settings.server_connection_string().expose_secret())
+            .await
+            .expect("Failed to connect to server.");
 
     connection
         .execute(format!(r#"CREATE DATABASE "{}";"#, settings.database_name).as_str())
         .await
         .expect("Failed to create database.");
 
-    let pool = PgPool::connect(&settings.database_connection_string())
+    let pool = PgPool::connect(&settings.database_connection_string().expose_secret())
         .await
         .expect("Failed to connect to database.");
 
@@ -70,9 +72,10 @@ async fn mock_database(settings: DatabaseSettings) -> PgPool {
 }
 
 async fn clean_database(settings: DatabaseSettings) {
-    let mut connection = PgConnection::connect(&settings.server_connection_string())
-        .await
-        .expect("Failed to connect to server.");
+    let mut connection =
+        PgConnection::connect(&settings.server_connection_string().expose_secret())
+            .await
+            .expect("Failed to connect to server.");
 
     connection
         .execute(format!(r#"DROP DATABASE "{}";"#, settings.database_name).as_str())

@@ -4,6 +4,7 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
+use secrecy::ExposeSecret;
 use sqlx::PgPool;
 use zero2prod::{
     configuration::get_configuration,
@@ -31,7 +32,7 @@ async fn spawn_app() -> TestApp {
 
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to create listener.");
     let address = listener.local_addr().unwrap();
-    let db_pool = PgPool::connect(&config.database.database_connection_string())
+    let db_pool = PgPool::connect(&config.database.database_connection_string().expose_secret())
         .await
         .expect("Failed to connect to database.");
 
