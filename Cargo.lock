@@ -2342,6 +2342,7 @@ dependencies = [
  "chrono",
  "config",
  "hyper",
+ "once_cell",
  "regex",
  "reqwest",
  "serde",

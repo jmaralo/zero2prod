@@ -1,16 +1,25 @@
 use std::net::{SocketAddr, TcpListener};
 
+use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use zero2prod::{
     configuration::{get_configuration, DatabaseSettings, Settings},
     startup::run,
+    telemetry::{get_subscriber, init_subscriber},
 };
+
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let subscriber = get_subscriber("test".into(), "info".into());
+    init_subscriber(subscriber);
+});
 
 /// Spawns a new app and returns the application details
 async fn spawn_app() -> TestApp {
     let mut config = get_configuration().expect("Failed to parse config.");
     config.database.database_name = Uuid::new_v4().to_string();
+
+    Lazy::force(&TRACING);
 
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to create listener.");
     let address = listener.local_addr().unwrap();
