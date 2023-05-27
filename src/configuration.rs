@@ -1,12 +1,18 @@
-use std::fmt::Display;
+use std::{env, fmt::Display};
 
 use config::{Config, ConfigError, File};
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 
 pub fn get_configuration() -> Result<Settings, ConfigError> {
+    let base_path = env::current_dir()
+        .expect("Failed to get CWD")
+        .join("configuration");
+    let environment = env::var("APP_ENVIRONMENT").unwrap_or(String::from("dev"));
+
     Config::builder()
-        .add_source(File::with_name("config"))
+        .add_source(File::from(base_path.join("base")).required(true))
+        .add_source(File::from(base_path.join(environment)).required(true))
         .build()?
         .try_deserialize()
 }
@@ -14,7 +20,13 @@ pub fn get_configuration() -> Result<Settings, ConfigError> {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Settings {
     pub database: DatabaseSettings,
-    pub application_port: u16,
+    pub application: ApplicationSettigns,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct ApplicationSettigns {
+    pub port: u16,
+    pub host: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]

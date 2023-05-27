@@ -14,7 +14,7 @@ async fn main() {
 
     init_subscriber(get_subscriber("zero2prod", "info", std::io::stdout));
 
-    let addr = format!("127.0.0.1:{}", config.application_port);
+    let addr = format!("{}:{}", config.application.host, config.application.port);
     let listener = TcpListener::bind(addr).unwrap();
 
     let db_pool =
