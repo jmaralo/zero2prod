@@ -17,9 +17,9 @@ async fn main() {
     let addr = format!("127.0.0.1:{}", config.application_port);
     let listener = TcpListener::bind(addr).unwrap();
 
-    let db_pool = PgPool::connect(config.database.database_connection_string().expose_secret())
-        .await
-        .expect("Failed to connect to database.");
+    let db_pool =
+        PgPool::connect_lazy(config.database.database_connection_string().expose_secret())
+            .expect("Failed to connect to database.");
 
     run(listener, db_pool).await.unwrap();
 }
