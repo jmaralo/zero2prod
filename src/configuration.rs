@@ -1,8 +1,9 @@
 use std::{env, fmt::Display};
 
-use config::{Config, ConfigError, File};
+use config::{Config, ConfigError, Environment, File};
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
+use serde_aux::prelude::deserialize_number_from_string;
 
 pub fn get_configuration() -> Result<Settings, ConfigError> {
     let base_path = env::current_dir()
@@ -13,6 +14,7 @@ pub fn get_configuration() -> Result<Settings, ConfigError> {
     Config::builder()
         .add_source(File::from(base_path.join("base")).required(true))
         .add_source(File::from(base_path.join(environment)).required(true))
+        .add_source(Environment::with_prefix("app").separator("__"))
         .build()?
         .try_deserialize()
 }
@@ -25,6 +27,7 @@ pub struct Settings {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ApplicationSettigns {
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
 }
@@ -33,6 +36,7 @@ pub struct ApplicationSettigns {
 pub struct DatabaseSettings {
     pub username: String,
     pub password: Secret<String>,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub database_name: String,
     pub host: String,
