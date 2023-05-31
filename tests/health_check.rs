@@ -1,59 +1,8 @@
-use std::{
-    env,
-    net::{SocketAddr, TcpListener},
-};
-
-use once_cell::sync::Lazy;
-use secrecy::ExposeSecret;
-use sqlx::PgPool;
-use zero2prod::{
-    configuration::get_configuration,
-    startup::run,
-    telemetry::{get_subscriber, init_subscriber},
-};
-
-static TRACING: Lazy<()> = Lazy::new(|| {
-    let name = "test".into();
-    let filter = "info".into();
-    if env::var("TEST_LOG").is_ok() {
-        let subscriber = get_subscriber(name, filter, std::io::stdout);
-        init_subscriber(subscriber);
-    } else {
-        let subscriber = get_subscriber(name, filter.into(), std::io::sink);
-        init_subscriber(subscriber);
-    }
-});
-
-/// Spawns a new app and returns the application details
-async fn spawn_app() -> TestApp {
-    let config = get_configuration().expect("Failed to parse config.");
-
-    Lazy::force(&TRACING);
-
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to create listener.");
-    let address = listener.local_addr().unwrap();
-    let db_pool = PgPool::connect(config.database.database_connection_string().expose_secret())
-        .await
-        .expect("Failed to connect to database.");
-
-    let server = run(listener, db_pool.clone());
-
-    tokio::spawn(server);
-
-    return TestApp {
-        address: address,
-        _db_pool: db_pool,
-    };
-}
-
-struct TestApp {
-    pub address: SocketAddr,
-    pub _db_pool: PgPool,
-}
+mod common;
 
 #[tokio::test]
 async fn health_check_test() {
-    let app = spawn_app().await;
+    let app = common::spawn_app().await;
 
     let client = reqwest::Client::new();
 
