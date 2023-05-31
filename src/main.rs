@@ -1,6 +1,5 @@
 use std::{net::TcpListener, time::Duration};
 
-use secrecy::ExposeSecret;
 use sqlx::postgres::PgPoolOptions;
 use zero2prod::{
     configuration::get_configuration,
@@ -19,8 +18,7 @@ async fn main() {
 
     let db_pool = PgPoolOptions::new()
         .acquire_timeout(Duration::from_secs(2))
-        .connect_lazy(config.database.database_connection_string().expose_secret())
-        .expect("Failed to connect to database.");
+        .connect_lazy_with(config.database.with_db());
 
     run(listener, db_pool).await.unwrap();
 }

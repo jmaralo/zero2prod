@@ -1,9 +1,10 @@
-use std::{env, fmt::Display};
+use std::env;
 
 use config::{Config, ConfigError, Environment, File};
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use serde_aux::prelude::deserialize_number_from_string;
+use sqlx::postgres::PgConnectOptions;
 
 pub fn get_configuration() -> Result<Settings, ConfigError> {
     let base_path = env::current_dir()
@@ -43,24 +44,15 @@ pub struct DatabaseSettings {
 }
 
 impl DatabaseSettings {
-    pub fn server_connection_string(&self) -> Secret<String> {
-        Secret::new(format!("{}", self))
+    pub fn with_db(&self) -> PgConnectOptions {
+        self.without_db().database(&self.database_name)
     }
 
-    pub fn database_connection_string(&self) -> Secret<String> {
-        Secret::new(format!("{}/{}", self, self.database_name))
-    }
-}
-
-impl Display for DatabaseSettings {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "postgres://{}:{}@{}:{}",
-            self.username,
-            self.password.expose_secret(),
-            self.host,
-            self.port
-        )
+    pub fn without_db(&self) -> PgConnectOptions {
+        PgConnectOptions::new()
+            .host(&self.host)
+            .username(&self.username)
+            .password(&self.password.expose_secret())
+            .port(self.port)
     }
 }
