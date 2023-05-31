@@ -4,7 +4,7 @@ use config::{Config, ConfigError, Environment, File};
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use serde_aux::prelude::deserialize_number_from_string;
-use sqlx::postgres::PgConnectOptions;
+use sqlx::postgres::{PgConnectOptions, PgSslMode};
 
 pub fn get_configuration() -> Result<Settings, ConfigError> {
     let base_path = env::current_dir()
@@ -41,6 +41,7 @@ pub struct DatabaseSettings {
     pub port: u16,
     pub database_name: String,
     pub host: String,
+    pub require_ssl: bool,
 }
 
 impl DatabaseSettings {
@@ -49,10 +50,17 @@ impl DatabaseSettings {
     }
 
     pub fn without_db(&self) -> PgConnectOptions {
+        let ssl_mode = if self.require_ssl {
+            PgSslMode::Require
+        } else {
+            PgSslMode::Prefer
+        };
+
         PgConnectOptions::new()
             .host(&self.host)
             .username(&self.username)
             .password(&self.password.expose_secret())
             .port(self.port)
+            .ssl_mode(ssl_mode)
     }
 }
