@@ -16,13 +16,9 @@ async fn main() {
     let addr = format!("{}:{}", config.application.host, config.application.port);
     let listener = TcpListener::bind(addr).unwrap();
 
-    let options = config.database.with_db();
-    println!("{:?}", options);
-    println!("{:?}", config);
-
     let db_pool = PgPoolOptions::new()
         .acquire_timeout(Duration::from_secs(2))
-        .connect_lazy_with(options);
+        .connect_lazy_with(config.database.with_db());
 
     run(listener, db_pool).await.unwrap();
 }
