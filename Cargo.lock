@@ -2425,6 +2425,7 @@ dependencies = [
  "tracing",
  "tracing-bunyan-formatter",
  "tracing-subscriber",
+ "unicode-segmentation",
  "uuid",
 ]
 

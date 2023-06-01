@@ -11,6 +11,8 @@ use sqlx::{postgres::PgQueryResult, PgPool};
 use tracing::instrument;
 use uuid::Uuid;
 
+use crate::domain::{name::SubscriberName, subscriber::NewSubscriber};
+
 #[instrument(skip(conn), level = "info", fields(req_id = Uuid::new_v4().to_string()))]
 pub async fn subscriptions(
     State(conn): State<Arc<PgPool>>,
@@ -21,9 +23,22 @@ pub async fn subscriptions(
         return StatusCode::BAD_REQUEST;
     };
 
-    tracing::info!("Saving new subscriber: {:?}", data);
+    let subscriber_name = match SubscriberName::parse(data.name) {
+        Ok(name) => name,
+        Err(err) => {
+            tracing::warn!("Error parsing name: {}", err);
+            return StatusCode::BAD_REQUEST;
+        }
+    };
 
-    match insert_subscription(conn, data.email, data.name).await {
+    let subscriber = NewSubscriber {
+        name: subscriber_name,
+        email: data.email,
+    };
+
+    tracing::info!("Saving new subscriber: {:?}", subscriber);
+
+    match insert_subscription(conn, &subscriber).await {
         Ok(_) => {
             tracing::info!("Successfully inserted subscription.");
             StatusCode::OK
@@ -38,8 +53,7 @@ pub async fn subscriptions(
 #[instrument(skip(conn), level = "debug")]
 async fn insert_subscription(
     conn: Arc<PgPool>,
-    email: String,
-    name: String,
+    subscriber: &NewSubscriber,
 ) -> Result<PgQueryResult, sqlx::Error> {
     sqlx::query!(
         r#"
@@ -47,8 +61,8 @@ async fn insert_subscription(
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        email,
-        name,
+        subscriber.email,
+        subscriber.name.inner_ref(),
         Utc::now(),
     )
     .execute(conn.as_ref())
