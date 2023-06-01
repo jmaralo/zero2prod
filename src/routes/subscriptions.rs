@@ -62,7 +62,7 @@ async fn insert_subscription(
         "#,
         Uuid::new_v4(),
         subscriber.email,
-        subscriber.name.inner_ref(),
+        subscriber.name.as_ref(),
         Utc::now(),
     )
     .execute(conn.as_ref())

@@ -40,17 +40,23 @@ pub mod name {
 
             return Ok(Self(name));
         }
+    }
 
-        pub fn inner(self) -> String {
-            return self.0;
+    impl AsRef<String> for SubscriberName {
+        fn as_ref(&self) -> &String {
+            return &self.0;
         }
+    }
 
-        pub fn inner_mut(&mut self) -> &mut String {
+    impl AsMut<String> for SubscriberName {
+        fn as_mut(&mut self) -> &mut String {
             return &mut self.0;
         }
+    }
 
-        pub fn inner_ref(&self) -> &String {
-            return &self.0;
+    impl Into<String> for SubscriberName {
+        fn into(self) -> String {
+            return self.0;
         }
     }
 }
