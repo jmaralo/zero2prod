@@ -38,25 +38,25 @@ pub mod name {
                 return Err(ParseError::InvalidSequence(name));
             }
 
-            return Ok(Self(name));
+            Ok(Self(name))
         }
     }
 
     impl AsRef<String> for SubscriberName {
         fn as_ref(&self) -> &String {
-            return &self.0;
+            &self.0
         }
     }
 
     impl AsMut<String> for SubscriberName {
         fn as_mut(&mut self) -> &mut String {
-            return &mut self.0;
+            &mut self.0
         }
     }
 
-    impl Into<String> for SubscriberName {
-        fn into(self) -> String {
-            return self.0;
+    impl From<SubscriberName> for String {
+        fn from(value: SubscriberName) -> Self {
+            value.0
         }
     }
 }

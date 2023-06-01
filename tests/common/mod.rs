@@ -13,13 +13,13 @@ use zero2prod::{
 };
 
 static TRACING: Lazy<()> = Lazy::new(|| {
-    let name = "test".into();
-    let filter = "info".into();
+    let name = "test";
+    let filter = "info";
     if env::var("TEST_LOG").is_ok() {
         let subscriber = get_subscriber(name, filter, std::io::stdout);
         init_subscriber(subscriber);
     } else {
-        let subscriber = get_subscriber(name, filter.into(), std::io::sink);
+        let subscriber = get_subscriber(name, filter, std::io::sink);
         init_subscriber(subscriber);
     }
 });
@@ -40,11 +40,11 @@ pub async fn spawn_app() -> TestApp {
 
     tokio::spawn(server);
 
-    return TestApp {
-        address: address,
-        db_pool: db_pool,
-        config: config,
-    };
+    TestApp {
+        address,
+        db_pool,
+        config,
+    }
 }
 
 async fn mock_database(settings: DatabaseSettings) -> PgPool {
